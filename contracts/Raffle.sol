@@ -27,6 +27,8 @@ contract Raffle is VRFConsumerBaseV2, AutomationCompatibleInterface {
     uint32 private constant NUM_WORDS = 1;
     address private s_recentWinner;
     RaffleState private s_raffleState;
+    uint256 private s_lastTimeStamp;
+    uint256 private immutable i_interval;
 
     //* Event
     event RaffleEnter(address indexed player);
@@ -38,7 +40,8 @@ contract Raffle is VRFConsumerBaseV2, AutomationCompatibleInterface {
         uint256 entranceFee,
         bytes32 gasLane,
         uint64 subscriptionID,
-        uint32 callBackGasLimit
+        uint32 callBackGasLimit,
+        uint256 interval
     ) VRFConsumerBaseV2(vrfCoordinatorV2) {
         i_vrfCoordinator = VRFCoordinatorV2Interface(vrfCoordinatorV2);
         i_entranceFee = entranceFee;
@@ -46,6 +49,8 @@ contract Raffle is VRFConsumerBaseV2, AutomationCompatibleInterface {
         i_subscriptionID = subscriptionID;
         i_callBackGasLimit = callBackGasLimit;
         s_raffleState = RaffleState.OPEN;
+        s_lastTimeStamp = block.timestamp;
+        i_interval = interval;
     }
 
     //* First task: Let user enter raffle
@@ -72,12 +77,22 @@ contract Raffle is VRFConsumerBaseV2, AutomationCompatibleInterface {
 
     function checkUpkeep(
         bytes calldata /* checkData */
-    ) external returns (bool upkeepNeeded, bytes memory /* performData */) {}
+    )
+        external
+        view
+        returns (bool upkeepNeeded, bytes memory /* performData */)
+    {
+        bool isOpen = (s_raffleState == RaffleState.OPEN);
+        bool timePassed = ((block.timestamp - s_lastTimeStamp) > i_interval);
+        bool hasPlayer = s_players.length > 0;
+        bool hasBalance = address(this).balance > 0;
+        upkeepNeeded = (isOpen && timePassed && hasPlayer && hasBalance);
+    }
 
     function performUpkeep(bytes calldata performData) external {}
 
     function pickRandomWinner() external {
-        //TODO: Request the random number
+        s_raffleState = RaffleState.CALCUlATING;
         uint256 requestID = i_vrfCoordinator.requestRandomWords(
             i_gasLane, //maximum gas we will pay in each request
             i_subscriptionID,
@@ -100,6 +115,9 @@ contract Raffle is VRFConsumerBaseV2, AutomationCompatibleInterface {
         // save that address to state variable
         s_recentWinner = recentWinner;
 
+        // set contract back to OPEN and reset list of player
+        s_raffleState = RaffleState.OPEN;
+        s_players = new address payable[](0);
         // withdraw fund from contract to this address
         (bool success, ) = recentWinner.call{value: address(this).balance}("");
         if (!success) {
