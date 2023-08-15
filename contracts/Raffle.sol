@@ -8,6 +8,11 @@ import "@chainlink/contracts/src/v0.8/interfaces/AutomationCompatibleInterface.s
 error Raffle__NotEnoughETHEntered();
 error Raffle__TransferFailed();
 error Raffle__NotOpen();
+error Raffle__UpkeepNotNeeded(
+    uint256 currentBalance,
+    uint256 numPlayer,
+    uint256 raffleState
+);
 
 contract Raffle is VRFConsumerBaseV2, AutomationCompatibleInterface {
     //* Type declarations
@@ -66,22 +71,9 @@ contract Raffle is VRFConsumerBaseV2, AutomationCompatibleInterface {
         emit RaffleEnter(msg.sender);
     }
 
-    /*** @dev This is the function that the Chainlink Keeper nodes call
-     * they look for the 'upkeepNeeded'to return true.
-     * The following should be true in order to return true:
-     * 1. Our time interval should have passed
-     * 2. The lottery should have at least 1 player, annd have some ETH
-     * 3. Our subscription is funded with LINK
-     * 4. The lottery should be in "open" state (when we request random number, other player can not enter our raffle)
-     */
-
     function checkUpkeep(
-        bytes calldata /* checkData */
-    )
-        external
-        view
-        returns (bool upkeepNeeded, bytes memory /* performData */)
-    {
+        bytes memory /* checkData */
+    ) public view returns (bool upkeepNeeded, bytes memory /* performData */) {
         bool isOpen = (s_raffleState == RaffleState.OPEN);
         bool timePassed = ((block.timestamp - s_lastTimeStamp) > i_interval);
         bool hasPlayer = s_players.length > 0;
@@ -89,9 +81,17 @@ contract Raffle is VRFConsumerBaseV2, AutomationCompatibleInterface {
         upkeepNeeded = (isOpen && timePassed && hasPlayer && hasBalance);
     }
 
-    function performUpkeep(bytes calldata performData) external {}
+    function performUpkeep(bytes calldata /* performData */) external override {
+        (bool upkeepNeeded, ) = checkUpkeep("");
 
-    function pickRandomWinner() external {
+        if (!upkeepNeeded) {
+            //pass some variable to error so everyone can see what cause this error
+            revert Raffle__UpkeepNotNeeded(
+                address(this).balance,
+                s_players.length,
+                uint256(s_raffleState)
+            );
+        }
         s_raffleState = RaffleState.CALCUlATING;
         uint256 requestID = i_vrfCoordinator.requestRandomWords(
             i_gasLane, //maximum gas we will pay in each request
@@ -115,9 +115,10 @@ contract Raffle is VRFConsumerBaseV2, AutomationCompatibleInterface {
         // save that address to state variable
         s_recentWinner = recentWinner;
 
-        // set contract back to OPEN and reset list of player
+        // set contract back to OPEN + reset list of player + reset timestamp
         s_raffleState = RaffleState.OPEN;
         s_players = new address payable[](0);
+        s_lastTimeStamp = block.timestamp;
         // withdraw fund from contract to this address
         (bool success, ) = recentWinner.call{value: address(this).balance}("");
         if (!success) {
