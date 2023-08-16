@@ -14,6 +14,12 @@ error Raffle__UpkeepNotNeeded(
     uint256 raffleState
 );
 
+/** @title A sample Raffle Contract
+ *  @author Trung
+ *  @notice This contract is for creating an untemperable decentralized smart contract
+ *  @dev Implement chainlink VRF v2 and chainlink Automation (formerly know as Keeper)
+ */
+
 contract Raffle is VRFConsumerBaseV2, AutomationCompatibleInterface {
     //* Type declarations
     enum RaffleState {
@@ -129,11 +135,21 @@ contract Raffle is VRFConsumerBaseV2, AutomationCompatibleInterface {
         emit WinnerPicked(recentWinner);
     }
 
+    //* View/pure function
+
     function getEntranceFee() public view returns (uint256) {
         return i_entranceFee;
     }
 
     function getRecentWinner() public view returns (address) {
         return s_recentWinner;
+    }
+
+    function getRaffleState() public view returns (RaffleState) {
+        return s_raffleState;
+    }
+
+    function getNumWords() public pure returns (uint256) {
+        return NUM_WORDS;
     }
 }
