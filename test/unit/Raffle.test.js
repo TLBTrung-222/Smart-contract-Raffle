@@ -70,5 +70,32 @@ const { assert, expect } = require("chai");
                       );
                   });
               });
+
+              describe("checkUpkeep", async function () {
+                  it("return false if people haven't send any ether", async function () {
+                      await network.provider.send("evm_increaseTime", [
+                          interval.toNumber() + 1,
+                      ]);
+                      await network.provider.send("evm_mine", []);
+                      const { upkeepNeeded } =
+                          await raffle.callStatic.checkUpkeep([]);
+                      assert(!upkeepNeeded);
+                  });
+                  it("upkeepNeeded will return fail if raffle is not in OPEN state", async function () {
+                      await raffle.enterRaffle({ value: entranceFee });
+                      await network.provider.send("evm_increaseTime", [
+                          interval.toNumber() + 1,
+                      ]);
+                      await network.provider.send("evm_mine", []);
+                      await raffle.performUpkeep([]);
+                      // At this time, our contract is in CALCULATING state
+                      // => raffleState = 1 and upkeepNeeded = false
+                      const raffleState = await raffle.getRaffleState();
+                      assert.equal(raffleState.toString(), "1");
+                      const { upkeepNeeded } =
+                          await raffle.callStatic.checkUpkeep([]);
+                      assert.equal(upkeepNeeded, false);
+                  });
+              });
           });
       });
