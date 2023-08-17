@@ -8,7 +8,7 @@ const { assert, expect } = require("chai");
 !developmentChains.includes(network.name)
     ? describe.skip
     : describe("Raffle Unit Tests", function () {
-          let raffle, vrfCoordinatorV2, entranceFee, deployer;
+          let raffle, vrfCoordinatorV2, entranceFee, deployer, interval;
           const chainID = network.config.chainId;
 
           beforeEach(async function () {
@@ -20,6 +20,7 @@ const { assert, expect } = require("chai");
                   deployer
               );
               entranceFee = await raffle.getEntranceFee();
+              interval = await raffle.getInterval();
           });
 
           describe("constructor", function () {
@@ -28,7 +29,6 @@ const { assert, expect } = require("chai");
                   const raffleState = await raffle.getRaffleState();
                   assert.equal(raffleState.toString(), "0");
                   // Interval should equal as we specified in each chain
-                  const interval = await raffle.getInterval();
                   assert.equal(
                       interval.toString(),
                       networkConfig[chainID]["interval"]
@@ -44,6 +44,30 @@ const { assert, expect } = require("chai");
                       const playerFromContract =
                           await raffle.getPlayerWithIndex(0);
                       assert.equal(playerFromContract, deployer);
+                  });
+                  it("emits event when player enter raffle", async function () {
+                      await expect(
+                          raffle.enterRaffle({ value: entranceFee })
+                      ).to.emit(raffle, "RaffleEnter");
+                  });
+                  it("doesn't allow player to enter when raffle in CALCULATING state", async function () {
+                      await raffle.enterRaffle({ value: entranceFee });
+                      // for a documentation of the methods below, go here: https://hardhat.org/hardhat-network/reference
+                      await network.provider.send("evm_increaseTime", [
+                          interval.toNumber() + 1,
+                      ]);
+                      await network.provider.request({
+                          method: "evm_mine",
+                          params: [],
+                      });
+                      // we pretend to be a keeper for a second
+                      await raffle.performUpkeep([]); // changes the state to calculating for our comparison below
+                      await expect(
+                          raffle.enterRaffle({ value: entranceFee })
+                      ).to.be.revertedWith(
+                          // is reverted as raffle is calculating
+                          "Raffle__NotOpen"
+                      );
                   });
               });
           });
