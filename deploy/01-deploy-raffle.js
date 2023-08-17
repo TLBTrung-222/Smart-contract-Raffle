@@ -12,15 +12,13 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
     const { deployer } = await getNamedAccounts();
     const chainID = network.config.chainId;
 
-    let vrfCoordinatorV2Address, subscriptionId;
+    let vrfCoordinatorV2Address, subscriptionId, vrfCoordinatorV2Mock;
 
     //* If we are on local network, "get" the address of already deployed VRFCoordinator mock contract
     if (developmentChains.includes(network.name)) {
         // Need to use ethers.getContract to create an contract instance
         // deployments.get doesn't give you contract instance, it contains address, abi, bytecode and other stuff related to contract.
-        const vrfCoordinatorV2Mock = await ethers.getContract(
-            "VRFCoordinatorV2Mock"
-        );
+        vrfCoordinatorV2Mock = await ethers.getContract("VRFCoordinatorV2Mock");
         vrfCoordinatorV2Address = vrfCoordinatorV2Mock.address;
 
         //* Get the subscription ID
@@ -60,6 +58,10 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
         log: true,
         waitConfirmations: network.config.blockConfirmations || 1,
     });
+
+    if (developmentChains.includes(network.name)) {
+        await vrfCoordinatorV2Mock.addConsumer(subscriptionId, raffle.address);
+    }
 
     if (
         !developmentChains.includes(network.name) &&
