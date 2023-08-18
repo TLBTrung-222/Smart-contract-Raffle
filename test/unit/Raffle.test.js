@@ -38,7 +38,7 @@ const { assert, expect } = require("chai");
 
           describe("enterRaffle", function () {
               it("revert when you don't pay enough", async function () {
-                  expect(raffle.enterRaffle()).to.be.reverted;
+                  await expect(raffle.enterRaffle()).to.be.reverted;
               });
               it("records player when they enter", async function () {
                   await raffle.enterRaffle({ value: entranceFee });
@@ -71,7 +71,7 @@ const { assert, expect } = require("chai");
               });
           });
 
-          describe("checkUpkeep", async function () {
+          describe("checkUpkeep", function () {
               it("return false if people haven't send any ether", async function () {
                   await network.provider.send("evm_increaseTime", [
                       interval.toNumber() + 1,
@@ -97,6 +97,43 @@ const { assert, expect } = require("chai");
                       []
                   );
                   assert(!upkeepNeeded);
+              });
+          });
+
+          describe("performUpkeep", function () {
+              it("can only be run when checkUpkeep return true", async function () {
+                  await raffle.enterRaffle({ value: entranceFee });
+                  await network.provider.send("evm_increaseTime", [
+                      interval.toNumber() + 1,
+                  ]);
+                  await network.provider.send("evm_mine", []);
+                  // assign the result of performUpkeep to a variable
+                  // if performUpkeep not works -> tx receive error -> assert(tx) will fail
+                  const tx = await raffle.performUpkeep([]);
+                  assert(tx);
+              });
+              it("revert error if checkUpkeep is fail", async function () {
+                  await expect(raffle.performUpkeep([])).to.be.revertedWith(
+                      "Raffle__UpkeepNotNeeded"
+                  );
+              });
+              it("update raffle state, emits an event and calls the vrf coordinator", async function () {
+                  //make checkUpkeep true
+                  await raffle.enterRaffle({ value: entranceFee });
+                  await network.provider.send("evm_increaseTime", [
+                      interval.toNumber() + 1,
+                  ]);
+                  await network.provider.send("evm_mine", []);
+                  // call performUpkeep
+                  const txResponse = await raffle.performUpkeep([]);
+                  const txReceipt = await txResponse.wait(1);
+                  // get the requestID from event in Raflle contract
+                  // note that calling requestRandomWord already emmitted an event, so we need to check the second event (our event) in 1 index
+                  const requestId = txReceipt.events[1].args.requestId;
+                  assert(requestId.toNumber() > 0);
+
+                  const raffleState = await raffle.getRaffleState();
+                  assert.equal(raffleState.toString(), "1");
               });
           });
       });
