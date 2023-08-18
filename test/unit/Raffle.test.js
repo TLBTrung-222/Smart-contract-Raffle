@@ -129,7 +129,7 @@ const { assert, expect } = require("chai");
                   const txReceipt = await txResponse.wait(1);
                   // get the requestID from event in Raflle contract
                   // note that calling requestRandomWord already emmitted an event, so we need to check the second event (our event) in 1 index
-                  const requestId = txReceipt.events[1].args.requestId;
+                  const requestId = txReceipt.events[1].args.requestI;
                   assert(requestId.toNumber() > 0);
 
                   const raffleState = await raffle.getRaffleState();
