@@ -32,7 +32,7 @@ contract Raffle is VRFConsumerBaseV2, AutomationCompatibleInterface {
     address payable[] private s_players;
     VRFCoordinatorV2Interface private immutable i_vrfCoordinator;
     bytes32 private immutable i_gasLane;
-    uint64 private immutable i_subscriptionID;
+    uint64 private immutable i_subscriptionId;
     uint32 private immutable i_callBackGasLimit;
     uint16 private constant REQUEST_CONFIRMATIONS = 3;
     uint32 private constant NUM_WORDS = 1;
@@ -57,7 +57,7 @@ contract Raffle is VRFConsumerBaseV2, AutomationCompatibleInterface {
         i_vrfCoordinator = VRFCoordinatorV2Interface(vrfCoordinatorV2);
         i_entranceFee = entranceFee;
         i_gasLane = gasLane;
-        i_subscriptionID = subscriptionID;
+        i_subscriptionId = subscriptionID;
         i_callBackGasLimit = callBackGasLimit;
         s_raffleState = RaffleState.OPEN;
         s_lastTimeStamp = block.timestamp;
@@ -99,14 +99,14 @@ contract Raffle is VRFConsumerBaseV2, AutomationCompatibleInterface {
             );
         }
         s_raffleState = RaffleState.CALCUlATING;
-        uint256 requestID = i_vrfCoordinator.requestRandomWords(
+        uint256 requestId = i_vrfCoordinator.requestRandomWords(
             i_gasLane, //maximum gas we will pay in each request
-            i_subscriptionID,
+            i_subscriptionId,
             REQUEST_CONFIRMATIONS,
             i_callBackGasLimit, //block fulfillRandomWords function if it's take too much gas
             NUM_WORDS //how many random number we want to get
         );
-        emit RequestedRaffleWinner(requestID);
+        emit RequestedRaffleWinner(requestId);
     }
 
     // We will override this function from VRFConsumerBaseV2 contract
