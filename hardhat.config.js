@@ -22,14 +22,15 @@ module.exports = {
             blockConfirmations: 1,
         },
         sepolia: {
-            chainId: 11155111,
-            blockConfirmations: 3,
             url: SEPOLIA_RPC_URL,
             accounts: [PRIVATE_KEY],
+            chainId: 11155111,
+            blockConfirmations: 3,
         },
     },
     etherscan: {
         apiKey: ETHERSCAN_API_KEY,
+        customChains: [],
     },
     gasReporter: {
         enabled: false,
