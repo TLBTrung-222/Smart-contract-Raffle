@@ -79,7 +79,12 @@ contract Raffle is VRFConsumerBaseV2, AutomationCompatibleInterface {
 
     function checkUpkeep(
         bytes memory /* checkData */
-    ) public view returns (bool upkeepNeeded, bytes memory /* performData */) {
+    )
+        public
+        view
+        override
+        returns (bool upkeepNeeded, bytes memory /* performData */)
+    {
         bool isOpen = (s_raffleState == RaffleState.OPEN);
         bool timePassed = ((block.timestamp - s_lastTimeStamp) > i_interval);
         bool hasPlayer = s_players.length > 0;
