@@ -186,6 +186,7 @@ const { AlwaysStencilFunc } = require("three");
                   // This will be more important for our staging tests...
                   // it will grab the event WinnerPicked which has been kicked off by mocking (the section below this Promise)
                   await new Promise(async (resolve, reject) => {
+                      console.log("Come to promise");
                       // This .once will excute after the mock section below
                       raffle.once("WinnerPicked", async () => {
                           // listener will execute

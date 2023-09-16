@@ -14,7 +14,7 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
 
     let vrfCoordinatorV2Address, subscriptionId, vrfCoordinatorV2Mock;
 
-    //* If we are on local network, "get" the address of already deployed VRFCoordinator mock contract
+    //* If we are on local network, we will create and fund to subscription manager progamatically
     if (developmentChains.includes(network.name)) {
         // Need to use ethers.getContract to create an contract instance
         // deployments.get doesn't give you contract instance, it contains address, abi, bytecode and other stuff related to contract.
@@ -33,7 +33,7 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
             VRF_SUB_FUND_AMOUNT
         );
     } else {
-        //* For subscription ID in testnet, we will interact with UI for now
+        //* For subscription ID in testnet, we will interact with UI
         vrfCoordinatorV2Address = networkConfig[chainID]["vrfCoordinatorV2"];
         subscriptionId = networkConfig[chainID]["subscriptionId"];
     }
